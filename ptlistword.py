@@ -131,7 +131,16 @@ for n in range(len(ptlist)):
                 except:
                         impression=''
 #TPR
-                tprparams={'ptData[CHARTNO]':ptchartno,'ptData[MEDNO]':ptmedno,'ptData[VISITSEQ]':ptvisitseq,'sDate':str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2),'eDate':str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2)}
+                sDate=str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)
+                eDate=str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2)
+                tprheader={
+                        'Connection':'keep-alive',
+                        'Host':'mobilereport.ndmctsgh.edu.tw',
+                        'Origin':'http://mobilereport.ndmctsgh.edu.tw',
+                        'Referer':'http://mobilereport.ndmctsgh.edu.tw/eForm/PL/ChangeCare/VitalSign?chartNo='+ptchartno+'&medNo='+ptmedno+'&visitSeq='+ptvisitseq+'&sDate='+sDate.replace('-','/')+'&eDate='+eDate.replace('-','/'),
+                        'Upgrade-Insecure-Requests':'1',
+                        'User-Agent':'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36'}
+                tprparams={'ptData[CHARTNO]':ptchartno,'ptData[MEDNO]':ptmedno,'ptData[VISITSEQ]':ptvisitseq,'sDate':sDate,'eDate':eDate}
                 tpr=session.post('http://mobilereport.ndmctsgh.edu.tw/eForm/PL/ChangeCare/VitalSignList',params=tprparams)
                 print(tpr.text)
 #取得第n個病人已做過data
