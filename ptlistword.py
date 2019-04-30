@@ -50,7 +50,7 @@ section.bottom_margin=Cm(1.27)
 today=datetime.today()
 todaydate=str(today.year)+str(today.month).zfill(2)+str(today.day).zfill(2)
 
-paragraph=document.add_paragraph(todaydate+'\n')
+paragraph=document.add_paragraph('['+todaydate+']'+'YOU ARE THE COMMANDER, TREATMENT IS YOUR WEAPON, TEST IS YOUR SCOUT, HISTORY IS YOUR SPY')
 #看是要哪一個主治的patient list
 atten=input('主治DOC五碼就好，不需要請直接enter:')
 if atten!='':
@@ -131,6 +131,7 @@ for n in range(len(ptlist)):
                 except:
                         impression=''
 #TPR
+'''
                 sDate=str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)
                 eDate=str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2)
                 tprheader={
@@ -143,6 +144,7 @@ for n in range(len(ptlist)):
                 tprparams={'ptData[CHARTNO]':ptchartno,'ptData[MEDNO]':ptmedno,'ptData[VISITSEQ]':ptvisitseq,'sDate':sDate,'eDate':eDate}
                 tpr=session.post('http://mobilereport.ndmctsgh.edu.tw/eForm/PL/ChangeCare/VitalSignList',params=tprparams)
                 print(tpr.text)
+'''
 #取得第n個病人已做過data
                 today_data='['+str(today.year)+str(today.month).zfill(2)+str(today.day).zfill(2)+']\n'
                 one_day_ago_data='['+str((today-timedelta(1)).year)+str((today-timedelta(1)).month).zfill(2)+str((today-timedelta(1)).day).zfill(2)+']\n'
@@ -235,11 +237,11 @@ for n in range(len(ptlist)):
         ID.text='ID  主治：'+VSname
         IDblank=locals()['table%s'%n].cell(1,0)
         IDblank.text=ptnamegenderage+'\n'+ptward+'\n'+ptindate+'\n'+ptchartno
-        locals()['table%s'%n].cell(0,1).text='TPR/IO'
-        locals()['table%s'%n].cell(1,1).text='TPR'
-        locals()['table%s'%n].cell(0,2).text='Diagnosis'
+        locals()['table%s'%n].cell(0,1).text='TPR/IO/NSVIP'
+        locals()['table%s'%n].cell(1,1).text=''
+        locals()['table%s'%n].cell(0,2).text='Impression'
         diagnosisblank=locals()['table%s'%n].cell(1,2)
-        diagnosisblank.text=impression
+        diagnosisblank.text='WHY Admitted:\n'+impression
 
         Data=locals()['table%s'%n].cell(2,0).merge(locals()['table%s'%n].cell(2,1))
         Data.text='Data'
@@ -262,7 +264,10 @@ for n in range(len(ptlist)):
 
         Noteblank.text=consultdep+surgery
         others=locals()['table%s'%n].cell(6,0).merge(locals()['table%s'%n].cell(6,3))
-        others.text='Other:\n'+consultdep+surgery+'\nnormal data:'+today_data_normal+one_day_ago_data_normal+two_day_ago_data_normal
+        if alldata=='1':
+                others.text='Other:\n'+consultdep+surgery+'\nnormal data:'+today_data_normal+one_day_ago_data_normal+two_day_ago_data_normal+'\nDDx:'
+        else:
+                others.text='Other:\n'+consultdep+surgery+'\nDDx:'
         print('完成第'+str(ptnumberstart)+'位病人')
         ptnumberstart=ptnumberstart+1
 #完成
