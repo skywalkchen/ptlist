@@ -1,0 +1,178 @@
+﻿import requests
+import re
+import datetime
+import os
+
+location=os.getcwd()
+null='0'
+session=requests.Session()
+atten=''
+ward=''
+depart=''
+#帳號密碼
+
+login_id=input('progressnote登入帳號(DOCXXXXX):')
+password=input('progressnote密碼(預設為身份證字號):')
+
+today=datetime.today()
+todaydate=str(today.year)+str(today.month).zfill(2)+str(today.day).zfill(2)
+
+#看是要哪一個主治的patient list
+atten=input('主治DOC五碼就好，不需要請直接enter:')
+if atten!='':
+        atten='DOC'+atten
+ward=input('請輸入病房號兩碼，不需要請直接enter:')
+ward=ward.upper()
+depart=input('請輸入科別代號，不需要請直接enter:')
+depart=depart.upper()
+alldata=input('需要全部的data請輸入1，只要異常值就好請輸入2:')
+print('準備中，請稍後......')
+#Header
+header={
+'Connection':'keep-alive',
+'Host':'mobilereport.ndmctsgh.edu.tw',
+'Origin':'http://mobilereport.ndmctsgh.edu.tw',
+'Referer':'http://mobilereport.ndmctsgh.edu.tw/eForm/Account/Login',
+'Upgrade-Insecure-Requests':'1',
+'User-Agent':'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36'}
+
+
+#取得verification token
+html=session.get('http://mobilereport.ndmctsgh.edu.tw/eForm/Account/Login',headers=header,allow_redirects=False)
+cookie_jar=html.cookies
+#print (cookie_jar)
+#print (html.status_code)
+findtoken=re.search(r'RequestVerificationToken" type="hidden" value="(.*)"',html.text)
+token=findtoken.group(1)
+#print (token)
+
+#登入mobilereport
+params={'login_id':login_id,'password':password,'__RequestVerificationToken':token}
+s=session.post('http://mobilereport.ndmctsgh.edu.tw/eForm/Account/Login',data=params,headers=header,cookies=cookie_jar)
+#print (s.status_code)
+if s.status_code!=200:
+    print('帳號密碼可能打錯了或是你沒連上mobiletsgh')
+#取得交接班清單及病人的資料
+s.headers.update({'Referer':'http://mobilereport.ndmctsgh.edu.tw/eForm/Home/Index/'+login_id})
+s=session.get('http://mobilereport.ndmctsgh.edu.tw/eForm/PL/ChangeCare/ChangeCareListSearch?SearchChartno=&SearchChinaname=&SearchSectionNo='+depart+'&SearchIDNo=&SearchNRCode='+ward+'&SearchBedCode=&SearchVSDR='+atten+'&SearchSpecialNote=&SearchSKey=&SearchCcGroup=%5B%22%22%5D&SearchDayRegion=1')
+if s.status_code!=200:
+        print('甚麼東西可能打錯了，請重新執行')
+ptlist=re.search(r"patientList = '(.*)'", s.text)
+if ptlist==None:
+        print('沒有病人，一開始的輸入是對的嗎?請重新啟動')
+ptlist=ptlist.group(1).split('},{')
+ptlist[0]=ptlist[0][1:]+'}'
+for n in range(1,len(ptlist)-1):
+        ptlist[n]='{'+ptlist[n]+'}'
+ptlist[-1]='{'+ptlist[-1][:-1]
+print('共有'+str(len(ptlist))+'位病人')
+#取得第n個病人的床號,姓名,姓別,年紀,入院日,病歷號
+for n in range(len(ptlist)):
+        try:
+                ptlist[n]=eval(ptlist[n])
+                ptnamegenderage=ptlist[n]['NameGenderAge'].replace(' ','').replace('\n','')
+                ptward=ptlist[n]['NrBedNo']
+                ptindate=ptlist[n]['INDATETIME'][0:7]
+                ptchartno=ptlist[n]['CHARTNO']
+                ptchartnoforweb=ptchartno
+                ptmedno=ptlist[n]['MEDNO']
+                ptvisitseq=ptlist[n]['VISITSEQ']
+                if len(ptchartno)==6:
+                        ptchartnoforweb='%20'+ptchartno
+                pthcaseno=ptlist[n]['HCASENO']
+                depname=ptlist[n]['DepName']
+                VSname=ptlist[n]['VSDRNAME']
+				ptdata=ptnamegenderage+' '+ptward+' '+ptindate+' '+ptchartno
+#取得第n個病人的入院impression為active problem
+                try:
+                        admissionnote=session.get('http://mobilereport.ndmctsgh.edu.tw/mr/AdmissionnoteREPORT.aspx?login_id='+login_id+'&HCASENO='+pthcaseno+'&TITLE='+ptindate+'-'+depname+'&special=n&cno='+ptchartnoforweb)
+                        impression=re.search(r"Impression.*\n-*\n(.*)\n-*", admissionnote.text)
+                except:
+                        print('病人'+ptchartno+'尚未建立admission note')
+                        continue
+                try:
+                        impression=impression.group(1)
+                except:
+                        impression=''
+#取得第n個病人已做過data
+                today_data='['+str(today.year)+str(today.month).zfill(2)+str(today.day).zfill(2)+']\n'
+                one_day_ago_data='['+str((today-timedelta(1)).year)+str((today-timedelta(1)).month).zfill(2)+str((today-timedelta(1)).day).zfill(2)+']\n'
+                two_day_ago_data='['+str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)+']\n'
+                datalist=session.get('http://mobilereport.ndmctsgh.edu.tw/IS3DaysData/Home/ListAllData2?cno='+ptchartnoforweb)
+                highdatalist=[]
+                lowdatalist=[]
+                normaldatalist=[]
+                try:
+                        highdatalist=re.findall(r'\s*(.*)\s*</td>\s*<td>\s*<span style="color:red;">(.*)</span>\r\n(.*\r\n){16}(.*)',datalist.text)
+                except:
+                        pass
+                for n in range(len(highdatalist)):
+                        time=highdatalist[n][3].lstrip()[:10]
+                        if highdatalist[n][0]!='Glucose (PC/DEXTRO)\r':
+                                if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
+                                        today_data=today_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                                if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
+                                        one_day_ago_data=one_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                                if time==str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)+'\n':
+                                        two_day_ago_data=two_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                try:
+                        lowdatalist=re.findall(r'\s*(.*)\s*</td>\s*<td>\s*<span style="color:orange;">(.*)</span>\r\n(.*\r\n){16}(.*)',datalist.text)
+                except:
+                        pass
+                for n in range(len(lowdatalist)):
+                        time=lowdatalist[n][3].lstrip()[:10]
+                        if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
+                                today_data=today_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                        if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
+                                one_day_ago_data=one_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                        if time==str((today-timedelta(2)).year)+'-'+str((today-timedelta(2)).month).zfill(2)+'-'+str((today-timedelta(2)).day).zfill(2):
+                                two_day_ago_data=two_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                if alldata=='1':
+                        try:
+                                normaldatalist=re.findall(r'\s*(.*)\s*</td>\s*<td>\s*<span style="color:inherit;">(.*)</span>\r\n(.*\r\n){16}(.*)',datalist.text)
+                        except:
+                                pass
+                        for n in range(len(normaldatalist)):
+                                time=normaldatalist[n][3].lstrip()[:10]
+                                if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
+                                        today_data=today_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                                if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
+                                        one_day_ago_data=one_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                                if time==str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)+'\n':
+                                        two_day_ago_data=two_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                else:
+                        pass
+				alldatasum=today_data+one_day_ago_data+two_day_ago_data
+#取得第n個病人的用藥目前有哪些
+                drugweb=session.get('http://mobilereport.ndmctsgh.edu.tw/mr/HISEXNDREPORT.aspx?login_id='+login_id+'&special=n&cno='+ptchartnoforweb)
+                try:
+                        drugs=re.findall(r'\n\n([\s\S]*)</pre>',drugweb.text)
+                        drugs[0]=re.sub('\d\d/\d\d\s\d\d:\d\d','',drugs[0])
+                except:
+                        drugs=''
+#取得最近做的image的日期跟做什麼
+                lisreports=''
+                lis=session.get('http://mobilereport.ndmctsgh.edu.tw/mr/RisList.aspx?login_id='+login_id+'&special=n&cno='+ptchartnoforweb)
+                lisreport=[]
+                lisreport=re.findall('>(.*)</a>',lis.text)
+                maximage=0
+                if len(lisreport)>=4:
+                        maximage=4
+                else:
+                        maximage=len(lisreport)
+                for n in range(1,maximage):
+                        lisreport[n]='['+lisreport[n][:8]+']'+lisreport[n][9:]
+                        lisreport[n]=lisreport[n].replace('PORTABLE CHEST A-P VIEW','CXR')
+                        lisreport[n]=lisreport[n].replace('CHEST, P-A VIEW','CXR')
+                        lisreport[n]=lisreport[n].replace('CHEST, A-P VIEW','CXR')
+                        lisreport[n]=lisreport[n].replace(r'K.U.B. (SUPINE)','KUB')
+                        lisreport[n]=lisreport[n].replace('WITHOUT/WITH CONTRAST-C.T.','CT')
+                        lisreports=lisreports+lisreport[n]+'\n'
+#寫入     
+file=open(location+'ptlist.html',mode='w')
+file.write(ptdata)
+file.write(impression)
+file.write(alldatasum)
+file.write(drugs)
+file.write(lisreports)
+file.close()
