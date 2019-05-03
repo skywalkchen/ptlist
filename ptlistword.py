@@ -130,10 +130,6 @@ for n in range(len(ptlist)):
                         impression=impression.group(1)
                 except:
                         impression=''
-#TPR
-                tprparams={'ptData[CHARTNO]':ptchartno,'ptData[MEDNO]':ptmedno,'ptData[VISITSEQ]':ptvisitseq,'sDate':str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2),'eDate':str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2)}
-                tpr=session.post('http://mobilereport.ndmctsgh.edu.tw/eForm/PL/ChangeCare/VitalSignList',params=tprparams)
-                print(tpr.text)
 #取得第n個病人已做過data
                 today_data='['+str(today.year)+str(today.month).zfill(2)+str(today.day).zfill(2)+']\n'
                 one_day_ago_data='['+str((today-timedelta(1)).year)+str((today-timedelta(1)).month).zfill(2)+str((today-timedelta(1)).day).zfill(2)+']\n'
@@ -150,24 +146,30 @@ for n in range(len(ptlist)):
                         time=highdatalist[n][3].lstrip()[:10]
                         if highdatalist[n][0]!='Glucose (PC/DEXTRO)\r':
                                 if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
-                                        today_data=today_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                                        today_data=today_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'/'
                                 if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
-                                        one_day_ago_data=one_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                                        one_day_ago_data=one_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'/'
                                 if time==str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)+'\n':
-                                        two_day_ago_data=two_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'\n'
+                                        two_day_ago_data=two_day_ago_data+highdatalist[n][0][:-1]+'='+highdatalist[n][1]+'/'
                 try:
                         lowdatalist=re.findall(r'\s*(.*)\s*</td>\s*<td>\s*<span style="color:orange;">(.*)</span>\r\n(.*\r\n){16}(.*)',datalist.text)
                 except:
                         pass
+                today_data+='\n'
+                one_day_ago_data+='\n'
+                two_day_ago_data+='\n'
                 for n in range(len(lowdatalist)):
                         time=lowdatalist[n][3].lstrip()[:10]
                         if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
-                                today_data=today_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                                today_data=today_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'/'
                         if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
-                                one_day_ago_data=one_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                                one_day_ago_data=one_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'/'
                         if time==str((today-timedelta(2)).year)+'-'+str((today-timedelta(2)).month).zfill(2)+'-'+str((today-timedelta(2)).day).zfill(2):
-                                two_day_ago_data=two_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'\n'
+                                two_day_ago_data=two_day_ago_data+lowdatalist[n][0][:-1]+'='+lowdatalist[n][1]+'/'
                 if alldata=='1':
+                        today_data+='\n'
+                        one_day_ago_data+='\n'
+                        two_day_ago_data+='\n'
                         try:
                                 normaldatalist=re.findall(r'\s*(.*)\s*</td>\s*<td>\s*<span style="color:inherit;">(.*)</span>\r\n(.*\r\n){16}(.*)',datalist.text)
                         except:
@@ -175,11 +177,11 @@ for n in range(len(ptlist)):
                         for n in range(len(normaldatalist)):
                                 time=normaldatalist[n][3].lstrip()[:10]
                                 if time==str(today.year)+'-'+str(today.month).zfill(2)+'-'+str(today.day).zfill(2):
-                                        today_data=today_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                                        today_data=today_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'/'
                                 if time==str((today-timedelta(1)).year)+'-'+str((today-timedelta(1)).month).zfill(2)+'-'+str((today-timedelta(1)).day).zfill(2):
-                                        one_day_ago_data=one_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                                        one_day_ago_data=one_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'/'
                                 if time==str((today-timedelta(2)).year)+str((today-timedelta(2)).month).zfill(2)+str((today-timedelta(2)).day).zfill(2)+'\n':
-                                        two_day_ago_data=two_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'\n'
+                                        two_day_ago_data=two_day_ago_data+normaldatalist[n][0][:-1]+'='+normaldatalist[n][1]+'/'
                 else:
                         pass
 #取得第n個病人的用藥目前有哪些
@@ -189,6 +191,11 @@ for n in range(len(ptlist)):
                         drugs[0]=re.sub('\d\d/\d\d\s\d\d:\d\d','',drugs[0])
                 except:
                         drugs=''
+                try:
+                        drugs[0].lstrip(u'處     方                                 劑量  頻率    用法  開始時間     結束時間')
+                        drugs[0].lstrip('\n')
+                except:
+                        pass
 #取得最近做的image的日期跟做什麼
                 lisreports=''
                 lis=session.get('http://mobilereport.ndmctsgh.edu.tw/mr/RisList.aspx?login_id='+login_id+'&special=n&cno='+ptchartnoforweb)
@@ -223,20 +230,20 @@ for n in range(len(ptlist)):
 #寫入word      
         locals()['table%s'%n]=document.add_table(rows=8, cols=6)
         ID=locals()['table%s'%n].cell(0,0)
-        ID.text='ID  主治：'+VSname
+        ID.text='主治：'+VSname
         IDblank=locals()['table%s'%n].cell(1,0).merge(locals()['table%s'%n].cell(4,0))
         IDblank.text=ptnamegenderage+'\n'+ptward+'\n'+ptindate+'\n'+ptchartno
         locals()['table%s'%n].cell(0,1).text='N'
-        locals()['table%s'%n].cell(0,2).text='      DIET'
+        locals()['table%s'%n].cell(0,2).text=''
         locals()['table%s'%n].cell(1,1).text='S'
-        locals()['table%s'%n].cell(1,2).text='E  M  V  '
+        locals()['table%s'%n].cell(1,2).text='GCS'
         locals()['table%s'%n].cell(2,1).text='V'
         locals()['table%s'%n].cell(2,2).text='SaO2:     ,FiO2:     '
         locals()['table%s'%n].cell(3,1).text='I'
         locals()['table%s'%n].cell(3,2).text='T:    ,ABx   '
         locals()['table%s'%n].cell(4,1).text='P'
         locals()['table%s'%n].cell(4,2).text='P:    ,BP     /    '
-        locals()['table%s'%n].cell(0,3).text='Diagnosis'
+        locals()['table%s'%n].cell(0,3).text='Impression'
         diagnosisblank=locals()['table%s'%n].cell(1,3).merge(locals()['table%s'%n].cell(4,3))
         diagnosisblank.text=impression
 
@@ -257,9 +264,15 @@ for n in range(len(ptlist)):
 
         locals()['table%s'%n].cell(0,5).text='Notes'
         Noteblank=locals()['table%s'%n].cell(1,5).merge(locals()['table%s'%n].cell(6,5))
-        Noteblank.text=consultdep+surgery
+        for n in range(1,8):
+	        day=str((today-timedelta(8-n)).month).zfill(2)+str((today-timedelta(8-n)).day).zfill(2)
+	        allday+='['+day+']'+'\n'
+        Noteblank.text=consultdep+allday
+        run1=Noteblank.paragraphs[0].runs
+        run1[0].outline=True
+	print(day)
         others=locals()['table%s'%n].cell(7,0).merge(locals()['table%s'%n].cell(7,5))
-        others.text='To do:\n\n\n\n'
+        others.text='To do:\n\n\n\nHistory:'
         print('完成第'+str(ptnumberstart)+'位病人')
         ptnumberstart=ptnumberstart+1
 #完成
